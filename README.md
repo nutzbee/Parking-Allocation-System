@@ -1,6 +1,6 @@
-# React Native Parking App
+# React Native Parking Expo App
 
-This React Native application implements a parking allocation system for a hypothetical parking complex. The application simulates a parking system for different types of vehicles, considering various constraints and pricing structures.
+This React Native expo application implements a parking allocation system for a hypothetical parking complex. The application simulates a parking system for different types of vehicles, considering various constraints and pricing structures.
 
 ## Features
 - **Parking Allocation**: Vehicles are allocated to the nearest available parking slot based on their size and parking type.
