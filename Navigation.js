@@ -1,16 +1,30 @@
-import { createAppContainer } from 'react-navigation';
-import { createStackNavigator } from 'react-navigation-stack';
 import ParkingScreen from './ParkingScreen';
 import UnparkingScreen from './UnparkingScreen';
 
-const AppNavigator = createStackNavigator(
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+const Stack = createNativeStackNavigator();
+
+const screenList = [
   {
-    Parking: ParkingScreen,
-    Unparking: UnparkingScreen
+    name: 'Parking',
+    component: ParkingScreen,
   },
   {
-    initialRouteName: 'Parking'
-  }
-);
+    name: 'Unparking',
+    component: UnparkingScreen,
+  },
+];
 
-export default createAppContainer(AppNavigator);
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        {screenList.map((screen) => (
+          <Stack.Screen name={screen.name} component={screen.component} />
+        ))}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}

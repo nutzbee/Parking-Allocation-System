@@ -1,9 +1,9 @@
 export const calculateParkingFee = (hours, slotSize) => {
   const initialRate = 40;
   const exceedingRate = {
-    'SP': 20,
-    'MP': 60,
-    'LP': 100,
+    SP: 20,
+    MP: 60,
+    LP: 100,
   };
 
   let fee = initialRate;
