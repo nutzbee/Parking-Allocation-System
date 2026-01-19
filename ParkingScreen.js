@@ -1,84 +1,199 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Modal from 'react-native-modal';
-import { parkingSlots, entryPoints } from './parkingData';
+import { parkingSlots, generateEntryPoint, entryPoints } from './parkingData';
+
+const defaultModalState = {
+  unparking: false,
+  parking: false,
+};
+
+const defaultHeading = {
+  parking: 'Select Your Vehicle Size',
+  unparking: 'Ready to Unpark?',
+};
 
 const ParkingScreen = ({ navigation }) => {
-  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState({
+    id: 0,
+    size: 0,
+    distances: [],
+  });
+  const [availableSlot, setAvailableSlot] = useState({
+    id: 0,
+    size: 0,
+    distances: [],
+  });
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedParkingType, setSelectedParkingType] = useState(null);
-  const [selectedEntryPoint] = useState('A');
-  const [isModalVisible, setModalVisible] = useState(false);
+  const [selectedEntryPoint, setSelectedEntryPoint] = useState(null);
+  const [isModalVisible, setModalVisible] = useState(defaultModalState);
 
-  const toggleModal = () => {
-    setModalVisible(!isModalVisible);
+  const toggleModal = (toggleVal) => {
+    setModalVisible({
+      ...isModalVisible,
+      [toggleVal]: !isModalVisible[toggleVal],
+    });
   };
 
   const parkVehicle = (vehicleSize, parkingType) => {
+    const randomEntryPoint = generateEntryPoint();
+
     setSelectedSize(vehicleSize);
     setSelectedParkingType(parkingType);
+    setSelectedEntryPoint(randomEntryPoint);
 
-    const availableSlots = parkingSlots.filter(slot => slot.size === parkingType);
+    const availableSlots = parkingSlots().filter(
+      (slot) => slot.size === parkingType && slot.available
+    );
     const nearestSlot = availableSlots.reduce((closest, current) => {
-      const distanceToEntry = current.distances[entryPoints.indexOf(selectedEntryPoint)];
-      const closestDistance = closest.distances[entryPoints.indexOf(selectedEntryPoint)];
+      const distanceToEntry =
+        current.distances[entryPoints.indexOf(randomEntryPoint)];
+      const closestDistance =
+        closest.distances[entryPoints.indexOf(randomEntryPoint)];
       return distanceToEntry < closestDistance ? current : closest;
     });
 
-    setSelectedSlot(nearestSlot);
-    toggleModal();
-  };
+    setAvailableSlot(nearestSlot);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('willBlur', () => {
-      setModalVisible(false);
-    });
-    return unsubscribe;
-  }, [navigation]);
+    if (selectedSlot.id !== 0) return toggleModal('unparking');
+
+    toggleModal('parking');
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Select Your Vehicle Size</Text>
+      {selectedSlot.id ? (
+        <Text style={[styles.heading, { textAlign: 'center' }]}>
+          You are currently parked at{'\n'}{selectedSlot.size} ({selectedSlot.id})
+        </Text>
+      ) : <></>}
+      <Text style={styles.heading}>
+        {defaultHeading[selectedSlot.id ? 'unparking' : 'parking']}
+      </Text>
 
-      <TouchableOpacity 
-        style={[styles.button, selectedSize === 'S' && styles.selectedButton]}
-        onPress={() => parkVehicle('S', 'SP')}
-      >
-        <Text style={styles.buttonText}>Small</Text>
-      </TouchableOpacity>
+      {!selectedSlot.id ? (
+        <>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              selectedSize === 'S' && styles.selectedButton,
+            ]}
+            onPress={() => parkVehicle('S', 'SP')}>
+            <Text style={styles.buttonText}>Small</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[styles.button, selectedSize === 'M' && styles.selectedButton]}
-        onPress={() => parkVehicle('M', 'MP')}
-      >
-        <Text style={styles.buttonText}>Medium</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              selectedSize === 'M' && styles.selectedButton,
+            ]}
+            onPress={() => parkVehicle('M', 'MP')}>
+            <Text style={styles.buttonText}>Medium</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[styles.button, selectedSize === 'L' && styles.selectedButton]}
-        onPress={() => parkVehicle('L', 'LP')}
-      >
-        <Text style={styles.buttonText}>Large</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              selectedSize === 'L' && styles.selectedButton,
+            ]}
+            onPress={() => parkVehicle('L', 'LP')}>
+            <Text style={styles.buttonText}>Large</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <TouchableOpacity
+          style={[styles.button, selectedSize === 'S' && styles.selectedButton]}
+          onPress={() => {
+            toggleModal('unparking');
+          }}>
+          <Text style={styles.buttonText}>Proceed</Text>
+        </TouchableOpacity>
+      )}
 
-      <Modal isVisible={isModalVisible} style={styles.modal}>
+      {/* Proceed to park modal */}
+      <Modal isVisible={isModalVisible.parking} style={styles.modal}>
         <View style={styles.modalContent}>
           {selectedSize && selectedParkingType && (
             <View style={styles.selectedInfo}>
+              <Text>{`Gate Entrance: ${selectedEntryPoint}`}</Text>
               <Text>{`Selected Vehicle Size: ${selectedSize}`}</Text>
               <Text>{`Parking Type: ${selectedParkingType}`}</Text>
-              <Text>{`Distance from Entry Point ${selectedEntryPoint}: ${selectedSlot.distances[entryPoints.indexOf(selectedEntryPoint)]} units`}</Text>
+              <Text>{`Distance from Entry Point ${selectedEntryPoint}: ${
+                availableSlot.distances[entryPoints.indexOf(selectedEntryPoint)]
+              } units`}</Text>
+            </View>
+          )}
+
+          {availableSlot && (
+            <Text
+              style={
+                styles.slotInfo
+              }>{`Parking space available slot in ${availableSlot.id} (${availableSlot.size})`}</Text>
+          )}
+
+          <TouchableOpacity
+            style={styles.modalButton}
+            onPress={() => {
+              const hoursConf = 60 * 60 * 6000;
+              const timeStart = new Date().getTime();
+              // console.log('timeStart', timeStart)
+              setSelectedSlot({
+                ...availableSlot,
+                timeStart,
+              });
+              navigation.navigate('Unparking', {
+                selectedSlot: {
+                  ...selectedSlot,
+                  timeStart,
+                },
+                selectedSize,
+                selectedParkingType,
+              });
+              toggleModal('parking');
+            }}>
+            <Text style={styles.modalButtonText}>Confirm Parking</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => toggleModal('parking')}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Unparking Modal */}
+      <Modal isVisible={isModalVisible.unparking} style={styles.modal}>
+        <View style={styles.modalContent}>
+          {selectedSize && selectedParkingType && (
+            <View style={styles.selectedInfo}>
+              <Text>{`Vehicle Size: ${selectedSize}`}</Text>
+              <Text>{`Parking Type: ${selectedParkingType}`}</Text>
             </View>
           )}
 
           {selectedSlot && (
-            <Text style={styles.slotInfo}>{`Parked in Slot ${selectedSlot.id} (${selectedSlot.size})`}</Text>
+            <Text
+              style={
+                styles.slotInfo
+              }>{`Parked in ${selectedSlot.id} (${selectedSlot.size})`}</Text>
           )}
 
-          <TouchableOpacity style={styles.modalButton} onPress={() => navigation.navigate('Unparking', { selectedSlot, selectedSize, selectedParkingType })}>
+          <TouchableOpacity
+            style={styles.modalButton}
+            onPress={() => {
+              navigation.navigate('Unparking', {
+                selectedSlot,
+                selectedSize,
+                selectedParkingType,
+              });
+              toggleModal('unparking');
+            }}>
             <Text style={styles.modalButtonText}>Proceed to Unpark</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.closeButton} onPress={toggleModal}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => toggleModal('unparking')}>
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>

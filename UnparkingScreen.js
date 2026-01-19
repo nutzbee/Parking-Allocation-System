@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 import { calculateParkingFee } from './parkingFees';
 
-const UnparkingScreen = ({ navigation }) => {
+const UnparkingScreen = ({ navigation, route }) => {
   const [hoursParked, setHoursParked] = useState('');
-  const { selectedParkingType } = navigation.state.params;
+  const { selectedParkingType, selectedSlot } = route?.params || {};
 
   const calculateAndDisplayFee = () => {
     if (isNaN(hoursParked) || hoursParked === '') {
@@ -16,27 +23,42 @@ const UnparkingScreen = ({ navigation }) => {
 
     let timeDisplay;
     if (parkingTime < 1) {
-      timeDisplay = `${Math.round(parkingTime * 60)} minutes`;
+      timeDisplay = `Less than an hour.`;
     } else {
       const hours = Math.floor(parkingTime);
       const minutes = Math.round((parkingTime % 1) * 60);
       timeDisplay = `${hours} hour${hours !== 1 ? 's' : ''}`;
-      if (minutes > 0) timeDisplay += ` ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+      if (minutes > 0)
+        timeDisplay += ` ${minutes} minute${minutes !== 1 ? 's' : ''}`;
     }
 
     const fee = calculateParkingFee(parkingTime, selectedParkingType);
     alert(`Parking Time: ${timeDisplay}\nParking Fee: ${fee} pesos`);
-    navigation.navigate('Parking');
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Parking',
+        },
+      ],
+    })
   };
+
+  useEffect(() => {
+    const timeNow = Date.now();
+    const diffMs = timeNow - selectedSlot.timeStart;
+    const _hoursParked = Math.floor(diffMs / (1000 * 60 * 60));
+    setHoursParked(_hoursParked);
+  }, [selectedSlot.timeStart]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Number of Hours Parked</Text>
       <TextInput
         style={styles.input}
-        onChangeText={(text) => setHoursParked(text.replace(/[^0-9.]/g, ''))}
         keyboardType="numeric"
-        value={hoursParked}
+        value={hoursParked || 'Less than an hour'}
+        disabled
       />
       <TouchableOpacity style={styles.button} onPress={calculateAndDisplayFee}>
         <Text style={styles.buttonText}>Calculate Fee</Text>
@@ -61,8 +83,12 @@ const styles = StyleSheet.create({
     borderColor: 'gray',
     borderWidth: 1,
     marginBottom: 20,
+    borderRadius: 10,
     padding: 10,
     width: '80%',
+    textAlign: 'center',
+    color: 'white',
+    backgroundColor: 'gray'
   },
   button: {
     backgroundColor: '#3498db',
